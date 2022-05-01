@@ -2,25 +2,13 @@
 # -*- coding: utf-8 -*-
 __author__ = 'jinmu333'
 
-import threading
-import time
-import tkinter as tk
 import cv2
 import lib.img_function as predict
 import lib.img_math as img_math
-import lib.img_excel as img_excel
-import lib.img_sql as img_sql
-from lib.img_api import api_pic
-import lib.screencut as screencut
-from threading import Thread
-from tkinter import ttk
-from tkinter.filedialog import *
 from PIL import Image, ImageTk, ImageGrab
-import tkinter.messagebox
-import requests
-from time import sleep
 from hyperlpr import *
 import numpy as np
+import sys, json
 
 ## 4个点的坐标排序，从左下角顺时针开始
 def order_points(pts):
@@ -37,7 +25,7 @@ def order_points(pts):
     
     return np.concatenate((Left, Right), axis=0)
 
-def im_cover(im_dst_path, dst_points, im_cover_path, isReduce, ppath):
+def im_cover(im_dst_path, dst_points, im_cover_path, isReduce, ppath, dstPath):
     img_icon = cv2.imread(im_cover_path)
     im_dst = cv2.imread(im_dst_path)
     # nrows, cols = img_icon.shape
@@ -72,7 +60,8 @@ def im_cover(im_dst_path, dst_points, im_cover_path, isReduce, ppath):
     cv2.fillConvexPoly(im_dst, pts_dst, (255, 255, 255))
     im_dst = im_dst + im_temp
     # cv2.imshow("DST", im_dst)
-    cv2.imwrite('./tmp/result/' + ppath, im_dst)
+    cv2.imwrite(dstPath, im_dst)
+    print(dstPath)
 
 def resize(w, h, pil_image):
     w_box = 200
@@ -84,8 +73,8 @@ def resize(w, h, pil_image):
     height = int(h*factor)
     return pil_image.resize((width, height), Image.ANTIALIAS)
 
-def run(ppath): 
-    pic_path = './car_pic/'+ppath
+def run(ppath, dstPath): 
+    pic_path = ppath
     picImg = Image.open(pic_path)
 
     predictor = predict.CardPredictor()
@@ -97,8 +86,8 @@ def run(ppath):
     
     first_img_instance = Image.fromarray(first_img)
     oldimg_instance = Image.fromarray(first_img)
-    first_img_instance.save('/app/tmp/ax_test_first_img.png')
-    oldimg_instance.save('/app/tmp/ax_test_oldimg.png')
+    # first_img_instance.save('/app/tmp/ax_test_first_img.png')
+    # oldimg_instance.save('/app/tmp/ax_test_oldimg.png')
 
     r_c, roi_c, color_c, box_point = predictor.img_color_contours(first_img, oldimg, True)
     box_point1 = box_point
@@ -148,40 +137,11 @@ def run(ppath):
         box_point[3][0] = box_point[3][0] / rate
         box_point[3][1] = box_point[3][1] / rate
     
-    im_cover(pic_path, box_point, '/app/car_pic/logo.png', isReduce, ppath=ppath)
+    im_cover(pic_path, box_point, '/app/car_pic/logo.png', isReduce, ppath=ppath, dstPath=dstPath)
     # cv2.waitKey(0)
 
 if __name__ == '__main__':
-    pic_paths = [
-        'IMG_1758.jpeg',
-        'car4.jpg',
-        'car5.jpg',
-        'car7.jpg',
-        'ganzou4.png',
-        'ganzou5.png',
-        'ganzou6.png',
-        'ganzou7.png',
-        'ganzou08.png',
-        'ganzou353.png',
-        'IMG_1759.jpeg',
-        'IMG_1761.jpeg',
-        'IMG_1762.jpeg',
-        'IMG_1764.jpeg',
-        'IMG_1769.jpeg',
-        'IMG_1774.jpeg',
-        'IMG_1870.jpeg',
-        'IMG_1872.jpeg',
-        'IMG_1873.jpeg',
-        'IMG_1875.jpeg',
-        'IMG_1877.jpeg',
-        'timg.jpg',
-        'timg1.jpg',
-        'timg3.jpg',
-        'timg2.jpg',
-        'timg4.jpg',
-        'wA87271.jpg',
-        'wATH859.jpg',
-        'wAUB816.jpg',
-    ]
-    for pic_path in pic_paths:
-        run(pic_path)
+    # s = '{"src": "/app/server/src/.cache/ganzou4.png", "dst": "/app/server/src/.cache/car_replace.png"}'
+    # payload = json.loads(s)
+    payload = json.loads(sys.argv[1])
+    run(payload['src'], payload['dst'])
